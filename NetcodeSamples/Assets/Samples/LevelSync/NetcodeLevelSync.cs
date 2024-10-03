@@ -51,7 +51,7 @@ public partial class NetcodeClientLevelSync : SystemBase
         if (!SystemAPI.QueryBuilder().WithAll<ClientLoadLevel, ReceiveRpcCommandRequest>().Build().IsEmptyIgnoreFilter)
         {
             FixedString64Bytes worldName = World.Name;
-            var ecb = new EntityCommandBuffer(Allocator.Temp);
+            var ecb = new EntityCommandBuffer(Allocator.TempJob);
             // When load level command arrives, disable ghost sync, unload current level and load specified level
             foreach (var (level, entity) in SystemAPI.Query<RefRO<ClientLoadLevel>>().WithEntityAccess()
                          .WithAll<ReceiveRpcCommandRequest>())
@@ -103,7 +103,7 @@ public partial class NetcodeServerLevelSync : SystemBase
 
     protected override void OnUpdate()
     {
-        var ecb = new EntityCommandBuffer(Allocator.Temp);
+        var ecb = new EntityCommandBuffer(Allocator.TempJob);
         var connections = GetComponentLookup<NetworkId>();
         var loadingInProgress = GetComponentLookup<LevelLoadingInProgress>();
         // TODO: Level number not being used for anything atm
@@ -127,8 +127,8 @@ public partial class NetcodeServerLevelSync : SystemBase
             UnityEngine.Debug.Log("Server subscenes finished loading and all clients are ready");
 
             var conQuery = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<NetworkId>());
-            var cons = conQuery.ToEntityArray(Allocator.Temp);
-            var conIds = conQuery.ToComponentDataArray<NetworkId>(Allocator.Temp);
+            var cons = conQuery.ToEntityArray(Allocator.TempJob);
+            var conIds = conQuery.ToComponentDataArray<NetworkId>(Allocator.TempJob);
             for (int i = 0; i < cons.Length; ++i)
             {
                 if (!EntityManager.HasComponent<NetworkStreamInGame>(cons[i]))
@@ -140,7 +140,7 @@ public partial class NetcodeServerLevelSync : SystemBase
 
             levelState.State = LevelSyncState.Idle;
             SystemAPI.SetSingleton(levelState);
-            ecb = new EntityCommandBuffer(Allocator.Temp);
+            ecb = new EntityCommandBuffer(Allocator.TempJob);
             FixedString64Bytes world = World.Name;
             Entities.WithAll<NetworkId>().ForEach((Entity entity) =>
             {
@@ -164,7 +164,7 @@ public static class NetcodeLevelSync
         // Mark each connection as being in progress of loading
         var connectionsQuery =
             serverWorld.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<NetworkId>());
-        var connectionEntities = connectionsQuery.ToEntityArray(Allocator.Temp);
+        var connectionEntities = connectionsQuery.ToEntityArray(Allocator.TempJob);
         foreach (var connection in connectionEntities)
         {
             serverWorld.EntityManager.AddComponentData(connection, new LevelLoadingInProgress());
@@ -174,8 +174,8 @@ public static class NetcodeLevelSync
     public static void SetLevelState(LevelSyncState state, World world)
     {
         var levelStateQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadWrite<LevelSyncStateComponent>());
-        var levelStateEntity = levelStateQuery.ToEntityArray(Allocator.Temp);
-        var levelStateData = levelStateQuery.ToComponentDataArray<LevelSyncStateComponent>(Allocator.Temp);
+        var levelStateEntity = levelStateQuery.ToEntityArray(Allocator.TempJob);
+        var levelStateData = levelStateQuery.ToComponentDataArray<LevelSyncStateComponent>(Allocator.TempJob);
         var levelState = levelStateData[0];
         levelState.State = state;
         world.EntityManager.SetComponentData(levelStateEntity[0], levelState);
